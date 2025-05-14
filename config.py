@@ -18,28 +18,28 @@ MEETUP_API_KEY = os.getenv('MEETUP_API_KEY')
 
 # Event Sources Settings
 ENABLED_SOURCES = {
-    'meetup': True,
-    'partiful': True,
-    'eventbrite': True,
-    'nycsystems': True,
+	'meetup': True,
+	'partiful': True,
+	'eventbrite': True,
+	'nycsystems': True,
 }
 
 # Eventbrite Configuration
 EVENTBRITE_ORGANIZER_IDS = [
-    "29377900795",  # Project Nutype
-    "86136754923",  # Lectures on Tap
-    # Add more organizer IDs here
+	"29377900795",  # Project Nutype
+	"86136754923",  # Lectures on Tap
+	# Add more organizer IDs here
 ]
 
 # Meetup Configuration
 MEETUP_GROUPS = [
-    "fat-cat-fab-lab",
-    "new-york-c-c-meetup-group",
-    "papers-we-love",
-    "nycultimate",
-    "rust-nyc",
-    "hackmanhattan"
-    # Add more groups here
+	"fat-cat-fab-lab",
+	"new-york-c-c-meetup-group",
+	"papers-we-love",
+	"nycultimate",
+	"rust-nyc",
+	"hackmanhattan"
+	# Add more groups here
 ]
 
 # Sync Settings
