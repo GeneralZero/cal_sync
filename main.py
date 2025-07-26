@@ -26,13 +26,13 @@ class EventAggregator:
 		if ENABLED_SOURCES.get('meetup'):
 			self.sources.append(MeetupEventSource())
 		if ENABLED_SOURCES.get('partiful'):
-			self.sources.append(PartifulEventSource())
+			self.sources.append(PartifulEventSource(ics_files=True))
 		if ENABLED_SOURCES.get('eventbrite'):
 			self.sources.append(EventbriteEventSource())
 		if ENABLED_SOURCES.get('nycsystems'):
 			self.sources.append(NYCSystemsEventSource())
 
-	async def fetch_all_events(self) -> List[Event]:
+	async def fetch_all_events(self):
 		"""Fetch events from all enabled sources."""
 		all_events = []
 		
@@ -55,9 +55,7 @@ class EventAggregator:
 			logger.info(f"Found total of {len(events)} events")
 			
 			# Sync to calendar
-			await self.calendar_sync.sync_events(events)
-			logger.info("Synced events to calendar")
-			
+			await self.calendar_sync.sync(events)			
 			logger.info("Sync completed successfully")
 			
 		except Exception as e:
