@@ -153,14 +153,34 @@ END:VCALENDAR"""
 
 		#Check which event type we are dealing with
 		if isinstance(event, ICSEvent):
+			#print(existing_event.icalendar_component)
 			# For ICSEvent, we can directly compare the icalendar_component
-			if event.icalendar_component == existing_event.icalendar_component:
-				return False
-			else:
-				logger.info(f"ICSEvent properties have changed for {event.name}.")
+			if event.begin != existing_event.icalendar_component.get("dtstart").dt:
+				logger.info(f"Start time has changed from {existing_event.icalendar_component.get('dtstart').dt} to {event.begin}.")
+				return True
+			if event.end != existing_event.icalendar_component.get("dtend").dt:
+				logger.info(f"End time has changed from {existing_event.icalendar_component.get('dtend').dt} to {event.end}.")
+				return True
+			if event.name != existing_event.icalendar_component.get("summary"):
+				logger.info(f"Title has changed from {existing_event.icalendar_component.get('summary')} to {event.name}.")
+				return True
+			if event.description != existing_event.icalendar_component.get("description"):
+				logger.info(f"Description has changed from {existing_event.icalendar_component.get('description')} to {event.description}.")
+				return True
+			if event.location != existing_event.icalendar_component.get("location"):
+				logger.info(f"Location has changed from {existing_event.icalendar_component.get('location')} to {event.location}.")
+				return True
+			if event.url != existing_event.icalendar_component.get("url"):
+				logger.info(f"URL has changed from {existing_event.icalendar_component.get('url')} to {event.url}.")
+				return True
+			if event.status.upper() != existing_event.icalendar_component.get("status"):
+				logger.info(f"Confirmation status has changed from {existing_event.icalendar_component.get('status')} to {'CONFIRMED' if event.status.upper() == 'CONFIRMED' else 'TENTATIVE'}.")
+				return True
+			if event.uid != existing_event.icalendar_component.get("uid"):
+				logger.info(f"Source ID has changed from {existing_event.icalendar_component.get('uid')} to {event.source_id}.")
 				return True
 		elif isinstance(event, Event):
-			print(event.__dict__)
+			#print(event.__dict__)
 			# For Event, we need to check each property manually
 			if event.title != existing_event.icalendar_component.get("summary"):
 				logger.info(f"Title has changed from {existing_event.icalendar_component.get('summary')} to {event.title}.")
@@ -321,7 +341,8 @@ END:VCALENDAR"""
 
 			#Add the event again
 			try:
-				calendar.save_event(ics_object.__str__())
+				logger.info(f"Adding event '{event1.serialize()}' to {ics_object.serialize()} after removing duplicates.")
+				calendar.save_event(event1.serialize())
 				logger.info(f"Added event '{title}' to {calendar.name} after removing duplicates.")
 			except Exception as e:
 				logger.error(f"Error adding event '{title}' to {calendar.name}: {str(e)}")
@@ -330,7 +351,8 @@ END:VCALENDAR"""
 			# Add the event to the calendar
 			try:
 				#logger.info(f"ics_object: {ics_object} {dir(ics_object)}")
-				calendar.save_event(ics_object.__str__())
+				logger.info(f"Adding event '{event1.serialize()}' to {ics_object.serialize()}.")
+				calendar.save_event(event1.serialize())
 				logger.info(f"Added event '{title}' to {calendar.name}")
 			except Exception as e:
 				logger.error(f"Error adding event '{title}' to {calendar.name}: {str(e)}")

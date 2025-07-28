@@ -153,7 +153,7 @@ class PartifulEventSource(EventSource):
 									# Parse start date with timezone handling
 									start_time = self._parse_datetime(event_data["startDate"])
 									if start_time < now:
-										logger.info(f"Skipping past event {event_data['id']} with start time {start_time}")
+										#logger.info(f"Skipping past event {event_data['id']} with start time {start_time}")
 										continue
 								except ValueError as e:
 									logger.error(f"Error parsing start date for event {event_data['id']}: {str(e)}")
