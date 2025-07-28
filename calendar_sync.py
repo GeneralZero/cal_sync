@@ -1,4 +1,4 @@
-import caldav
+import caldav, hashlib
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 import logging, traceback
@@ -71,8 +71,25 @@ DTEND:{end_time.strftime('%Y%m%dT%H%M%SZ')}
 		if event.url:
 			ical_template += f"URL:{event.url}\n"
 
-		ical_template += "STATUS:CONFIRMED\n" if event.is_confirmed else "STATUS:TENTATIVE\n"
+		if event.is_confirmed is not None:
+			ical_template += "STATUS:CONFIRMED\n" if event.is_confirmed else "STATUS:TENTATIVE\n"
+		else:
+			ical_template += "STATUS:NEEDS-ACTION\n"
 
+		# Add UID for uniqueness based on the event title and start time
+		if event.source_id:
+			ical_template += f"UID:{event.source_id}\n"
+		else:
+			# Fallback to a combination of title and start time if no source_id
+			# This is not ideal but ensures uniqueness
+			hash_out = hashlib.sha256().update(f"{event.title}_{start_time.isoformat()}".encode('utf-8'))
+			ical_template += f"UID:{hash_out.hexdigest()}\n"
+
+		# Add creation date
+		ical_template += f"DTSTAMP:{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}\n"
+
+		#Add timezone information
+		ical_template += "X-WR-TIMEZONE:UTC\n"
 		
 		# Add custom properties for source tracking
 		if event.source:
@@ -132,13 +149,39 @@ END:VCALENDAR"""
 		return duplicate_events
 	
 	def _event_properties_changed(self, event: Event, existing_event: caldav.Event) -> bool:
-		for prop in event.__dict__:
-			logger.info(f"Checking property {prop} for changes")
-			if prop not in existing_event.icalendar_component:
-				logger.info(f"Property {prop} not found in existing event. Event has changed.")
+		"""Check if any properties of the event have changed compared to the existing event."""
+
+		#Check which event type we are dealing with
+		if isinstance(event, ICSEvent):
+			# For ICSEvent, we can directly compare the icalendar_component
+			if event.icalendar_component == existing_event.icalendar_component:
+				return False
+			else:
+				logger.info(f"ICSEvent properties have changed for {event.name}.")
 				return True
-			if existing_event.icalendar_component[prop] != event.__dict__[prop]:
-				logger.info(f"Property {prop} has changed from {existing_event.icalendar_component[prop]} to {event.__dict__[prop]}.")
+		elif isinstance(event, Event):
+			print(event.__dict__)
+			# For Event, we need to check each property manually
+			if event.title != existing_event.icalendar_component.get("summary"):
+				logger.info(f"Title has changed from {existing_event.icalendar_component.get('summary')} to {event.title}.")
+				return True
+			if event.start_time != existing_event.icalendar_component.get("dtstart").dt:
+				logger.info(f"Start time has changed from {existing_event.icalendar_component.get('dtstart').dt} to {event.start_time}.")
+				return True
+			if event.end_time != existing_event.icalendar_component.get("dtend").dt:
+				logger.info(f"End time has changed from {existing_event.icalendar_component.get('dtend').dt} to {event.end_time}.")
+				return True
+			if event.description != existing_event.icalendar_component.get("description"):
+				logger.info(f"Description has changed from {existing_event.icalendar_component.get('description')} to {event.description}.")
+				return True
+			if event.location != existing_event.icalendar_component.get("location"):
+				logger.info(f"Location has changed from {existing_event.icalendar_component.get('location')} to {event.location}.")
+				return True
+			if event.url != existing_event.icalendar_component.get("url"):
+				logger.info(f"URL has changed from {existing_event.icalendar_component.get('url')} to {event.url}.")
+				return True
+			if event.is_confirmed != (existing_event.icalendar_component.get("status") == "CONFIRMED"):
+				logger.info(f"Confirmation status has changed from {existing_event.icalendar_component.get('status')} to {'CONFIRMED' if event.is_confirmed else 'TENTATIVE'}.")
 				return True
 		return False
 
@@ -355,7 +398,8 @@ END:VCALENDAR"""
 
 			#Add the event again
 			try:
-				calendar.save_event(event_object)
+				ics_object = self._event_to_ical(event_object)
+				calendar.save_event(ics_object)
 				logger.info(f"Added event '{event_object.title}' to {calendar.name} after removing duplicates.")
 			except Exception as e:
 				logger.error(f"Error adding event '{event_object.title}' to {calendar.name}: {str(e)}")
@@ -363,7 +407,8 @@ END:VCALENDAR"""
 			logger.info(f"Event '{event_object.title}' does not exist in {calendar.name}. Adding it.")
 			# Add the event to the calendar
 			try:
-				calendar.save_event(event_object)
+				ics_object = self._event_to_ical(event_object)
+				calendar.save_event(ics_object)
 				logger.info(f"Added event '{event_object.title}' to {calendar.name}")
 			except Exception as e:
 				logger.error(f"Error adding event '{event_object.title}' to {calendar.name}: {str(e)}")

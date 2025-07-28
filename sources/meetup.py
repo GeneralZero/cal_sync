@@ -1,4 +1,4 @@
-import aiohttp
+import aiohttp, traceback
 from datetime import datetime, timezone, timedelta
 from typing import List
 import logging
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class MeetupEventSource(EventSource):
 	GQL_URL = "https://www.meetup.com/gql2"
-	QUERY_HASH = "cd0acc08851f57b3ac74282b902c1096be1fb8ccf57d765f7c20046606509cfa"
+	QUERY_HASH = "01a34de668955a5b6307d23391a403d4e7e11668473da7bd42b6fd15d779a6bd"
 
 	def name(self) -> str:
 		return "meetup"
@@ -67,6 +67,10 @@ class MeetupEventSource(EventSource):
 							
 							# Extract events from the GraphQL response
 							# Note: We'll need to adjust the path to events based on the actual response structure
+							#print(data)  # Debugging line to see the structure
+							if "data" not in data or "groupByUrlname" not in data["data"] or "events" not in data["data"]["groupByUrlname"]:
+								logger.error(f"No events found for group {group} in response: {data}")
+								continue
 							group_events = data.get("data", {}).get("groupByUrlname", {}).get("events", []).get("edges", [])
 							
 							for event_data in group_events:
@@ -116,5 +120,6 @@ class MeetupEventSource(EventSource):
 
 				except Exception as e:
 					logger.error(f"Error fetching Meetup events for group {group}: {str(e)}")
+					logger.error(traceback.print_exc())
 
 		return events 
