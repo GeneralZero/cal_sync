@@ -106,7 +106,10 @@ END:VCALENDAR"""
 
 		for existing in existing_events:
 			event_summary = existing.icalendar_component.get("summary")
-			event_time = existing.icalendar_component.get("dtstart").dt
+			dtstart = existing.icalendar_component.get("dtstart")
+			if dtstart is None:
+				continue  # Skip events without start time
+			event_time = dtstart.dt
 
 			# Ensure event_time is a datetime with timezone info
 			if isinstance(event_time, datetime):
@@ -126,7 +129,10 @@ END:VCALENDAR"""
 		duplicate_events = []
 		for existing in existing_events:
 			event_summary = existing.icalendar_component.get("summary")
-			event_time = existing.icalendar_component.get("dtstart").dt
+			dtstart = existing.icalendar_component.get("dtstart")
+			if dtstart is None:
+				continue  # Skip events without start time
+			event_time = dtstart.dt
 			if isinstance(event, ICSEvent):
 				event_start = event.begin.astimezone(timezone.utc)
 				event_title = event.name
@@ -155,11 +161,17 @@ END:VCALENDAR"""
 		if isinstance(event, ICSEvent):
 			#print(existing_event.icalendar_component)
 			# For ICSEvent, we can directly compare the icalendar_component
-			if event.begin != existing_event.icalendar_component.get("dtstart").dt:
-				logger.info(f"Start time has changed from {existing_event.icalendar_component.get('dtstart').dt} to {event.begin}.")
+			dtstart = existing_event.icalendar_component.get("dtstart")
+			if dtstart is None:
+				return True  # Treat missing dtstart as a change
+			if event.begin != dtstart.dt:
+				logger.info(f"Start time has changed from {dtstart.dt} to {event.begin}.")
 				return True
-			if event.end != existing_event.icalendar_component.get("dtend").dt:
-				logger.info(f"End time has changed from {existing_event.icalendar_component.get('dtend').dt} to {event.end}.")
+			dtend = existing_event.icalendar_component.get("dtend")
+			if dtend is None:
+				return True  # Treat missing dtend as a change
+			if event.end != dtend.dt:
+				logger.info(f"End time has changed from {dtend.dt} to {event.end}.")
 				return True
 			if event.name != existing_event.icalendar_component.get("summary"):
 				logger.info(f"Title has changed from {existing_event.icalendar_component.get('summary')} to {event.name}.")
@@ -185,11 +197,17 @@ END:VCALENDAR"""
 			if event.title != existing_event.icalendar_component.get("summary"):
 				logger.info(f"Title has changed from {existing_event.icalendar_component.get('summary')} to {event.title}.")
 				return True
-			if event.start_time != existing_event.icalendar_component.get("dtstart").dt:
-				logger.info(f"Start time has changed from {existing_event.icalendar_component.get('dtstart').dt} to {event.start_time}.")
+			dtstart = existing_event.icalendar_component.get("dtstart")
+			if dtstart is None:
+				return True  # Treat missing dtstart as a change
+			if event.start_time != dtstart.dt:
+				logger.info(f"Start time has changed from {dtstart.dt} to {event.start_time}.")
 				return True
-			if event.end_time != existing_event.icalendar_component.get("dtend").dt:
-				logger.info(f"End time has changed from {existing_event.icalendar_component.get('dtend').dt} to {event.end_time}.")
+			dtend = existing_event.icalendar_component.get("dtend")
+			if dtend is None:
+				return True  # Treat missing dtend as a change
+			if event.end_time != dtend.dt:
+				logger.info(f"End time has changed from {dtend.dt} to {event.end_time}.")
 				return True
 			if event.description != existing_event.icalendar_component.get("description"):
 				logger.info(f"Description has changed from {existing_event.icalendar_component.get('description')} to {event.description}.")
@@ -233,7 +251,10 @@ END:VCALENDAR"""
 		# Remove all duplicates
 		for existing in potential_duplicates:
 			event_summary = existing.icalendar_component.get("summary")
-			event_time = existing.icalendar_component.get("dtstart").dt
+			dtstart = existing.icalendar_component.get("dtstart")
+			if dtstart is None:
+				continue  # Skip events without start time
+			event_time = dtstart.dt
 			
 			# Ensure event_time is a datetime with timezone info
 			if isinstance(event_time, datetime):
@@ -326,6 +347,12 @@ END:VCALENDAR"""
 				logger.info(f"Event '{title}' has changed. Updating in {calendar.name}.")
 				#Remove the old event
 				self._remove_duplicate_events(event1, calendar)
+				# Add the updated event back
+				try:
+					calendar.save_event(event1.serialize())
+					logger.info(f"Updated event '{title}' in {calendar.name}")
+				except Exception as e:
+					logger.error(f"Error updating event '{title}' in {calendar.name}: {str(e)}")
 			else:
 				logger.info(f"Event '{title}' has not changed. No action needed in {calendar.name}.")
 				return
@@ -405,6 +432,13 @@ END:VCALENDAR"""
 				logger.info(f"Event '{event_object.title}' has changed. Updating in {calendar.name}.")
 				#Remove the old event
 				self._remove_duplicate_events(event_object, calendar)
+				# Add the updated event back
+				try:
+					ics_object = self._event_to_ical(event_object)
+					calendar.save_event(ics_object)
+					logger.info(f"Updated event '{event_object.title}' in {calendar.name}")
+				except Exception as e:
+					logger.error(f"Error updating event '{event_object.title}' in {calendar.name}: {str(e)}")
 			else:
 				logger.info(f"Event '{event_object.title}' has not changed. No action needed in {calendar.name}.")
 				return
